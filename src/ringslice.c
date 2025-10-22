@@ -89,6 +89,36 @@ int ringslice_strcmp(ringslice_t const *const me, char const *str) {
     return -(int)*chr;
 }
 
+int ringslice_strncmp(ringslice_t const *const me, char const *str, int n) {
+    if (n <= 0) {
+        return 0;
+    }
+    
+    uint8_t const *first_ptr = &(me->buf[me->first]);
+    uint8_t const *last_ptr = &(me->buf[me->last]);
+    uint8_t const *const buf_end = &(me->buf[me->buf_size]);
+    uint8_t const *const buf_start = &(me->buf[0]);
+    uint8_t const *chr = (uint8_t const *)str;
+
+    int count = 0;
+    while (first_ptr != last_ptr && count < n) {
+        int diff = (int)*first_ptr - (int)*chr;
+        if (diff) {
+            return diff;
+        }
+
+        chr++;
+        count++;
+        first_ptr = ringslice_ptr_increment_wrap_around(first_ptr, 1, buf_start, buf_end);
+    }
+
+    if (count == n) {
+        return 0; 
+    }
+    
+    return -(int)*chr;
+}
+
 ringslice_t ringslice_subslice_with_suffix(ringslice_t const *const me, ringslice_cnt_t from_idx, char const *suffix) {
     ringslice_cnt_t const rs_len = ringslice_len(me);
     DBC_ASSERT(204, from_idx <= ringslice_len(me));
@@ -106,21 +136,33 @@ ringslice_t ringslice_subslice_with_suffix(ringslice_t const *const me, ringslic
     return resp_slice;
 }
 
-int ringslice_prefixcmp(ringslice_t const *const me, char const *str) {
-    uint8_t const *buf = me->buf;
-    ringslice_cnt_t idx = me->first;
-    ringslice_cnt_t last = me->last;
-    ringslice_cnt_t size = me->buf_size;
+/**
+* @brief Gets gap slice between two subslices from one buffer. slice1 should be before slice2.
+*        Slices shouldnt be overlaped.
+* @param[in] slice1 first ringslice instance
+* @param[in] slice2 second ringslice instance
+* @return gap slice instance
+*/
+ringslice_t ringslice_subslice_gap(ringslice_t const *const slice1, ringslice_t const *const slice2) { 
+    DBC_ASSERT(705, (slice1->buf == slice2->buf) || (slice1->buf_size == slice2->buf_size)); //different buffers
 
-    while (*str && idx != last) {
-        int diff = (int)buf[idx] - (int)*str;
-        if (diff) {
-            return diff;
-        }
+    uint8_t* const rs_buff = slice1->buf;
+    ringslice_cnt_t const rs_buff_len = slice1->buf_size;
 
-        str++;
-        idx = ringslice_index_shift_wrap_around(idx, 1, size);
-    }
+    DBC_ASSERT(706, slice1->first < rs_buff_len && slice1->last < rs_buff_len && // within bounds
+                    slice2->first < rs_buff_len && slice2->last < rs_buff_len);
+    
+    ringslice_cnt_t a_first = slice1->first;
+    ringslice_cnt_t a_last = (slice1->last < slice1->first) ? slice1->last + rs_buff_len : slice1->last;
+    ringslice_cnt_t b_first = slice2->first;
+    ringslice_cnt_t b_last = (slice2->last < slice2->first) ? slice2->last + rs_buff_len : slice2->last;
 
-    return -(int)*str;
+    DBC_ASSERT(707, !((a_first <= b_first && b_first < a_last) || // slices should NOT overlap
+                     (a_first < b_last  && b_last  <= a_last)  ||
+                     (b_first <= a_first && a_first < b_last)  ||
+                     (b_first < a_last  && a_last  <= b_last)));
+
+    DBC_ASSERT(708, (a_last <= b_first) || (b_last <= a_first));
+
+    return ringslice_initializer(rs_buff, rs_buff_len, slice1->last, slice2->first);
 }

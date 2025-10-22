@@ -181,6 +181,140 @@ TEST_GROUP("Basic") {
         VERIFY(ringslice_strcmp(&subrs, "abcdefghi") == 0);
     }
 
+    TEST("Testing ringslice_subslice_equals()") {
+        char const test_buf[] = "efghijabcdsdadsaaasd";
+        ringslice_t rs1 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                5,
+                                                2);
+        ringslice_t rs2 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                5,
+                                                2);
+        bool res = ringslice_subslice_equals(&rs1, &rs2);
+        VERIFY(res == true);
+        rs2.first = 6;
+        res = ringslice_subslice_equals(&rs1, &rs2);
+        VERIFY(res == false);
+    }
+
+    TEST("Testing ringslice_subslice_get_content()") {
+        char const test_buf[] = "0123456789";
+        char dest_buf[50] = {'F'};
+        memset(dest_buf, 'F', 50);
+        ringslice_t rs = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                0,
+                                                3);
+        ringslice_subslice_get_content(&rs, (uint8_t*)dest_buf, 50);
+        VERIFY(memcmp((uint8_t*)dest_buf, "012FFF", 6) == 0);
+        memset(dest_buf, 'F', 50);
+        rs = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                7,
+                                                3);
+        ringslice_subslice_get_content(&rs, (uint8_t*)dest_buf, 50);
+        VERIFY(memcmp((uint8_t*)dest_buf, "789012FF", 8) == 0);
+        memset((uint8_t*)dest_buf, 'F', 50);
+        ringslice_subslice_get_content(&rs, (uint8_t*)dest_buf, 4);
+        VERIFY(memcmp((uint8_t*)dest_buf, "7890FF", 6) == 0);
+    }
+
+    TEST("Testing ringslice_subslice_gap()") {
+        char const test_buf[] = "qwer1234rewq";
+        ringslice_t rs1 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                0,
+                                                4);
+        ringslice_t rs2 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                8,
+                                                0);
+        ringslice_t rs_res = ringslice_subslice_gap(&rs1, &rs2);
+        VERIFY(ringslice_strcmp(&rs_res, "1234") == 0);
+        
+        rs1 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                6,
+                                                10);
+        rs2 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                2,
+                                                6);
+        rs_res = ringslice_subslice_gap(&rs1, &rs2);
+        
+        VERIFY(ringslice_strcmp(&rs_res, "wqqw") == 0);   
+    }
+
+    TEST("Testing ringslice_subslice_after()") {
+        char const test_buf[] = "qwer1234rewq";
+        ringslice_t rs1 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                0,
+                                                11);
+        ringslice_t rs2 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                0,
+                                                4);
+        ringslice_t rs_res = ringslice_subslice_after(&rs1, &rs2, 4);
+        VERIFY(ringslice_strcmp(&rs_res, "1234") == 0);
+        rs_res = ringslice_subslice_after(&rs1, &rs2, 0);
+        VERIFY(ringslice_strcmp(&rs_res, "1234rew") == 0);   
+    }
+
+
+    TEST("Testing ringslice_strncmp(), simple test") {
+        char const slice_str_beg[] = "Hell";
+        char const slice_str_end[] = "o World!";
+
+        char buf[sizeof("Hello World!") + 10];
+
+        ringslice_cnt_t buffer_size = (ringslice_cnt_t)ARRAY_NELEM(buf);
+
+        ringslice_cnt_t last = (ringslice_cnt_t)strlen(slice_str_end);
+        ringslice_cnt_t first = (buffer_size - (ringslice_cnt_t)strlen(slice_str_beg)) % buffer_size;
+
+        memcpy(buf, slice_str_end, strlen(slice_str_end));            // copy the end part of string into beginning of buffer
+        memcpy(&(buf[first]), slice_str_beg, strlen(slice_str_beg));  // copy the beginning of string into part of buffer
+
+        ringslice_t rs = ringslice_initializer((uint8_t *)buf, buffer_size, first, last);
+
+        VERIFY(ringslice_strncmp(&rs, "Hello World!", buffer_size) == 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello!", buffer_size) < 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello there", buffer_size) < 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello", buffer_size) > 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello Nick", buffer_size) > 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello World! ", buffer_size) < 0);
+    }
+
+    TEST("Testing ringslice_strncmp(), buffer and positioning variation") {
+        char const slice_str[] = "Hello World!";
+        int const slice_str_len = strlen(slice_str);
+
+        char buf[sizeof(slice_str) + 20];
+
+        for (int i = 0; i < slice_str_len; i++) {
+            for (int buffer_size = (int)ARRAY_NELEM(slice_str); buffer_size < (int)ARRAY_NELEM(buf); buffer_size++) {
+                ringslice_cnt_t last = slice_str_len - (ringslice_cnt_t)i;
+                ringslice_cnt_t first = (buffer_size - i) % buffer_size;
+                memcpy(buf, &(slice_str[i]), slice_str_len - i);  // copy the end part of string into beginning of buffer
+                memcpy(&(buf[first]), slice_str, i);              // copy the beginning of string into part of buffer
+
+                ringslice_t rs = ringslice_initializer((uint8_t *)buf, buffer_size, first, last);
+
+                VERIFY(ringslice_strncmp(&rs, slice_str, buffer_size) == 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello!", buffer_size) < 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello there", buffer_size) < 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello", buffer_size) > 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello Nick", buffer_size) > 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello World! ", buffer_size) < 0);
+            }
+        }
+    }
+
+
+
+
     TEST("Testing ringslice_sscanf(), discontinuous ring buffer, integers") {
         char const test_buf[] = "G: 1, 2, 0xFFEF +CRE";
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf,
@@ -261,32 +395,17 @@ TEST_GROUP("Basic") {
         VERIFY(val == 42);
         VERIFY(strcmp("[]", string_buf) == 0);
     }
-
-    TEST("Testing ringslice_prefixcmp(), discontinuous ring buffer") {
-        char const slice_str_beg[] = "Hell";
-        char const slice_str_end[] = "o World!";
-
-        char buf[sizeof("Hello World!") + 10];
-
-        ringslice_cnt_t buffer_size = (ringslice_cnt_t)ARRAY_NELEM(buf);
-
-        ringslice_cnt_t last = (ringslice_cnt_t)strlen(slice_str_end);
-        ringslice_cnt_t first = (buffer_size - (ringslice_cnt_t)strlen(slice_str_beg)) % buffer_size;
-
-        memcpy(buf, slice_str_end, strlen(slice_str_end));            // copy the end part of string into beginning of buffer
-        memcpy(&(buf[first]), slice_str_beg, strlen(slice_str_beg));  // copy the beginning of string into part of buffer
-
-        ringslice_t rs = ringslice_initializer((uint8_t *)buf, buffer_size, first, last);
-
-        VERIFY(ringslice_prefixcmp(&rs, "Hello World!") == 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello World") == 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello W") == 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello ") == 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello") == 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello!") < 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello there") < 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello Nick") > 0);
-        VERIFY(ringslice_prefixcmp(&rs, "Hello World! ") < 0);
+    TEST("Testing ringslice_sscanf(), discontinuous ring buffer, %* and %[]") {
+        char const test_buf[] = "+CMGR: \"REC UNREAD\",\"+79031234567\",56,\"23/10/15,14:30:25+12\"";
+        ringslice_t rs = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                0,
+                                                strlen(test_buf) - 1);
+        char string_buf[20] = {0};
+        int val = 0;
+        int argc = ringslice_scanf(&rs, "+CMGR: \"%*[^\"]\",\"%[^\"]\",%d,", string_buf, &val);
+        VERIFY(argc == 2);
+        VERIFY(val == 56);
+        VERIFY(strcmp("+79031234567", string_buf) == 0);
     }
-
 }  // TEST_GROUP()

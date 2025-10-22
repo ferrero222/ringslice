@@ -263,6 +263,52 @@ RINGSLICE_INLINE ringslice_t ringslice_subslice(ringslice_t const * const me, ri
 }
 
 /*!
+* Get slice after another
+* @param[in] me parent slice
+* @param[in] subslice slice after whicn one will be return
+* @param[in] len slice len after
+*
+* @return new slice instance
+*
+*/
+RINGSLICE_INLINE ringslice_t ringslice_subslice_after(ringslice_t const *const me, ringslice_t const *const subslice, const ringslice_cnt_t len) { 
+  DBC_MODULE_REQUIRE(RINGSLICE_MODULE, 202, subslice->buf == me->buf);
+  DBC_MODULE_REQUIRE(RINGSLICE_MODULE, 203, subslice->buf_size == me->buf_size);
+  if(len) DBC_MODULE_REQUIRE(RINGSLICE_MODULE, 204, len < subslice->buf_size);
+  if(!len) return ringslice_initializer(me->buf, me->buf_size, subslice->last, me->last);
+  else     return ringslice_initializer(me->buf, me->buf_size, subslice->last, (subslice->last +len)%subslice->buf_size); 
+}
+
+/*!
+* Get content from slice
+* @param[in] subslice ringslice slice where data will be taken
+* @param[in] dst ptr to buffer where data will be stored
+* @param[in] dst_size length of dest buff
+*
+* @return none
+*
+*/
+RINGSLICE_INLINE void ringslice_subslice_get_content(ringslice_t const *const subslice, uint8_t* const dst, const ringslice_cnt_t dst_size) {
+  for(uint8_t i = 0; i < (ringslice_len(subslice) > dst_size ? dst_size : ringslice_len(subslice)) ; ++i){
+    dst[i] = subslice->buf[(subslice->first +i) % subslice->buf_size];
+  }
+}
+
+/*!
+* Checks if two ringslices are equal (same buffer, same parameters and same content)
+* @param[in] slice1 first ringslice instance
+* @param[in] slice2 second ringslice instance
+* @return true if slices are equal, false otherwise
+*/
+RINGSLICE_INLINE bool ringslice_subslice_equals(ringslice_t const *const slice1, ringslice_t const *const slice2){
+    DBC_MODULE_REQUIRE(RINGSLICE_MODULE, 801, slice1 != NULL);
+    DBC_MODULE_REQUIRE(RINGSLICE_MODULE, 802, slice2 != NULL);
+    if(slice1 == slice2) return true;
+    return(slice1->buf == slice2->buf && slice1->buf_size == slice2->buf_size && slice1->first == slice2->first && slice1->last == slice2->last);
+}
+
+
+/*!
 * Compares ringslice instance with string lexicographically
 * @param[in] me ringslice instance which is compared with string
 * @param[in] str string for compare
@@ -273,6 +319,19 @@ RINGSLICE_INLINE ringslice_t ringslice_subslice(ringslice_t const * const me, ri
 *
 */
 int ringslice_strcmp(ringslice_t const * const me, char const * str);
+
+/*!
+* Compares ringslice instance with string lexicographically and lenght check
+* @param[in] me ringslice instance which is compared with string
+* @param[in] str string for compare
+* @param[in] n lenght
+*
+* @return 0 if are equal,
+*   negative value if ringslice appears before str in lexicographical order,
+*   positive value if ringslice appears after str in lexicographical order
+*
+*/
+int ringslice_strncmp(ringslice_t const *const me, char const *str, int n);
 
 /*!
 * Searches for substring in ringslice instance
@@ -300,18 +359,6 @@ ringslice_t ringslice_strstr(ringslice_t const * const me, char const * substr);
 ringslice_t ringslice_subslice_with_suffix(ringslice_t const * const me, ringslice_cnt_t from_idx, char const * suffix);
 
 /*!
-* Checks whether a string is a prefix of ringslice
-* @param[in] me ringslice instance which is checked for prefix with string
-* @param[in] str string for check
-*
-* @return 0 if string is a prefix of ringslice,
-*   negative value if ringslice appears before str in lexicographical order,
-*   positive value if ringslice appears after str in lexicographical order
-*
-*/
-int ringslice_prefixcmp(ringslice_t const * const me, char const * str);
-
-/*!
 * scanf implementation for ringslice
 * @param[in] rs ringslice instance
 * @param[in] fmt format string
@@ -322,6 +369,15 @@ int ringslice_prefixcmp(ringslice_t const * const me, char const * str);
 *
 */
 int ringslice_scanf(ringslice_t const * const rs, const char *fmt, ...);
+
+/**
+* @brief Gets gap slice between two subslices from one buffer. slice1 should be before slice2.
+*        Slices shouldnt be overlaped.
+* @param[in] slice1 first ringslice instance
+* @param[in] slice2 second ringslice instance
+* @return gap slice instance
+*/
+ringslice_t ringslice_subslice_gap(ringslice_t const *const slice1, ringslice_t const *const slice2);
 
 /*!
 * @}
