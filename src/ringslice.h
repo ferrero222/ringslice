@@ -312,26 +312,28 @@ RINGSLICE_INLINE bool ringslice_subslice_equals(ringslice_t const *const slice1,
 * Compares ringslice instance with string lexicographically
 * @param[in] me ringslice instance which is compared with string
 * @param[in] str string for compare
+* @param[in] str_len string length
 *
 * @return 0 if are equal,
 *   negative value if ringslice appears before str in lexicographical order,
 *   positive value if ringslice appears after str in lexicographical order
 *
 */
-int ringslice_strcmp(ringslice_t const * const me, char const * str);
+int ringslice_strcmp(ringslice_t const * const me, char const * str, const ringslice_cnt_t str_len);
 
 /*!
 * Compares ringslice instance with string lexicographically and lenght check
 * @param[in] me ringslice instance which is compared with string
 * @param[in] str string for compare
-* @param[in] n lenght
+* @param[in] str_len string length
+* @param[in] n length to compare
 *
 * @return 0 if are equal,
 *   negative value if ringslice appears before str in lexicographical order,
 *   positive value if ringslice appears after str in lexicographical order
 *
 */
-int ringslice_strncmp(ringslice_t const *const me, char const *str, int n);
+int ringslice_strncmp(ringslice_t const *const me, char const *str, const ringslice_cnt_t str_len, int n);
 
 /*!
 * Searches for substring in ringslice instance

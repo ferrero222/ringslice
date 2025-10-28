@@ -69,31 +69,36 @@ ringslice_t ringslice_strstr(ringslice_t const *const me, char const *substr) {
     return substr_slice;
 }
 
-int ringslice_strcmp(ringslice_t const *const me, char const *str) {
+int ringslice_strcmp(ringslice_t const * const me, char const * str, const ringslice_cnt_t str_len) {
     uint8_t const *first_ptr = &(me->buf[me->first]);
     uint8_t const *last_ptr = &(me->buf[me->last]);
     uint8_t const *const buf_end = &(me->buf[me->buf_size]);
     uint8_t const *const buf_start = &(me->buf[0]);
     uint8_t const *chr = (uint8_t const *)str;
-
-    while (first_ptr != last_ptr) {
+    ringslice_cnt_t str_count = 0;
+    while (first_ptr != last_ptr && str_count < str_len) {
         int diff = (int)*first_ptr - (int)*chr;
         if (diff) {
             return diff;
         }
 
         chr++;
+        str_count++;
         first_ptr = ringslice_ptr_increment_wrap_around(first_ptr, 1, buf_start, buf_end);
     }
-
-    return -(int)*chr;
+    if (str_count == str_len && first_ptr != last_ptr) {
+        return (int)*first_ptr; 
+    }
+    if (first_ptr == last_ptr && str_count < str_len) {
+        return -(int)*chr;
+    }
+    return 0;
 }
 
-int ringslice_strncmp(ringslice_t const *const me, char const *str, int n) {
+int ringslice_strncmp(ringslice_t const *const me, char const *str, const ringslice_cnt_t str_len, int n) {
     if (n <= 0) {
         return 0;
     }
-    
     uint8_t const *first_ptr = &(me->buf[me->first]);
     uint8_t const *last_ptr = &(me->buf[me->last]);
     uint8_t const *const buf_end = &(me->buf[me->buf_size]);
@@ -101,7 +106,9 @@ int ringslice_strncmp(ringslice_t const *const me, char const *str, int n) {
     uint8_t const *chr = (uint8_t const *)str;
 
     int count = 0;
-    while (first_ptr != last_ptr && count < n) {
+    ringslice_cnt_t str_count = 0;
+
+    while (first_ptr != last_ptr && count < n && str_count < str_len) {
         int diff = (int)*first_ptr - (int)*chr;
         if (diff) {
             return diff;
@@ -109,14 +116,19 @@ int ringslice_strncmp(ringslice_t const *const me, char const *str, int n) {
 
         chr++;
         count++;
+        str_count++;
         first_ptr = ringslice_ptr_increment_wrap_around(first_ptr, 1, buf_start, buf_end);
     }
-
     if (count == n) {
         return 0; 
     }
-    
-    return -(int)*chr;
+    if (str_count == str_len && first_ptr != last_ptr && count < n) {
+        return (int)*first_ptr;
+    }
+    if (first_ptr == last_ptr && str_count < str_len && count < n) {
+        return -(int)*chr; 
+    }
+    return 0;
 }
 
 ringslice_t ringslice_subslice_with_suffix(ringslice_t const *const me, ringslice_cnt_t from_idx, char const *suffix) {
