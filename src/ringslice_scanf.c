@@ -382,125 +382,101 @@ static char const * get_scanset_end(const char *scanset) {
 * @param[in] buf pointer to buffer of ringslice
 * @param[in] size buffer size
 * @param[in] fmt part of format string after 
+* @param[out] assign_output indicates whether to assign output to variable (0 for '*', 1 otherwise)
 *
 * @return an index after the last read and processed char
     or first on error.
 *
 */
 static ringslice_cnt_t wa_parse_arg(ringslice_cnt_t const first,
-                                    ringslice_cnt_t const last,
-                                    uint8_t const buf[],
-                                    ringslice_cnt_t size,
-                                    const char * fmt,
-                                    va_list *const args) {
+                                        ringslice_cnt_t const last,
+                                        uint8_t const buf[],
+                                        ringslice_cnt_t size,
+                                        const char * fmt,
+                                        va_list *const args,
+                                        int* assign_output) {
     int *intp, intv = 0;
     unsigned int *uintp, uintv = 0, width = 0;
     char *charp;
     ringslice_cnt_t cur = first;
     
-    // Проверяем, нужно ли пропускать поле (args == NULL)
-    bool skip_field = (args == NULL);
+    if (*fmt == '*') {
+        *assign_output = 0;
+        fmt++;
+    }
     
     fmt = dec_to_uint(fmt, &width);
-    
     if (*fmt == 'd') {
         cur = wa_dec_to_int(first, last, buf, size, &intv);
-        if (cur != first && !skip_field) {
+        if (cur != first && *assign_output) {
             intp = va_arg(*args, int *);
             *intp = intv;
         }
     } else if (*fmt == 'u') {
         cur = wa_dec_to_uint(first, last, buf, size, &uintv);
-        if (cur != first && !skip_field) {
+        if (cur != first && *assign_output) {
             uintp = va_arg(*args, unsigned int *);
             *uintp = uintv;
         }
     } else if (*fmt == 'x' || *fmt == 'X') {
         cur = wa_hex_to_uint(first, last, buf, size, &uintv);
-        if (cur != first && !skip_field) {
+        if (cur != first && *assign_output) {
             uintp = va_arg(*args, unsigned int *);
             *uintp = uintv;
         }
     } else if (*fmt == 'c') {
-        if (!skip_field) {
+        if (*assign_output) {
             charp = va_arg(*args, char *);
-            if (width == 0) {
-                width = 1;
-            }
-            while (cur != last && uintv < width) {
+        }
+        if (width == 0) {
+            width = 1;
+        }
+        while (cur != last && uintv < width) {
+            if (*assign_output) {
                 charp[uintv] = buf[cur];
-                cur = ringslice_index_shift_wrap_around(cur, 1, size);
-                ++uintv;
             }
-        } else {
-            // Пропускаем символы
-            if (width == 0) {
-                width = 1;
-            }
-            while (cur != last && uintv < width) {
-                cur = ringslice_index_shift_wrap_around(cur, 1, size);
-                ++uintv;
-            }
+            cur = ringslice_index_shift_wrap_around(cur, 1, size);
+            ++uintv;
         }
     } else if (*fmt == 's') {
-        if (!skip_field) {
+        if (*assign_output) {
             charp = va_arg(*args, char *);
-            while (cur != last && !is_space(buf[cur]) &&
-                   (width == 0 || uintv < width)) {
+        }
+        while (cur != last && !is_space(buf[cur]) &&
+               (width == 0 || uintv < width)) {
+            if (*assign_output) {
                 charp[uintv] = buf[cur];
-                cur = ringslice_index_shift_wrap_around(cur, 1, size);
-                ++uintv;
             }
+            cur = ringslice_index_shift_wrap_around(cur, 1, size);
+            ++uintv;
+        }
+        if (*assign_output) {
             charp[uintv] = '\0';
-        } else {
-            // Пропускаем строку
-            while (cur != last && !is_space(buf[cur]) &&
-                   (width == 0 || uintv < width)) {
-                cur = ringslice_index_shift_wrap_around(cur, 1, size);
-                ++uintv;
-            }
         }
     } else if (*fmt == '[') {
         fmt++;
-        if (!skip_field) {
+        if (*assign_output) {
             charp = va_arg(*args, char *);
-            int inversed = 0;
-            if(*fmt == '^') {
-                inversed = 1;
-                ++fmt;
-            }
-
-            char const * scanset_end = get_scanset_end(fmt);
-            if(*scanset_end == '\0') {
-                // No closing bracket found, it is an error
-                return cur;
-            }
-
-            while (cur != last && (inversed ^ is_in_scanset(buf[cur], fmt)) &&
-                   (width == 0 || uintv < width)) {
+        }
+        int inversed = 0;
+        if(*fmt == '^')
+        {
+            inversed = 1;
+            ++fmt;
+        }
+        char const * scanset_end = get_scanset_end(fmt);
+        if(*scanset_end == '\0') {
+            return cur;
+        }
+        while (cur != last && (inversed ^ is_in_scanset(buf[cur], fmt))){
+            if (*assign_output && (width == 0 || uintv < width)) {
                 charp[uintv] = buf[cur];
-                cur = ringslice_index_shift_wrap_around(cur, 1, size);
                 ++uintv;
             }
+            cur = ringslice_index_shift_wrap_around(cur, 1, size);
+        }
+        if (*assign_output) {
             charp[uintv] = '\0';
-        } else {
-            // Пропускаем scanset
-            int inversed = 0;
-            if(*fmt == '^') {
-                inversed = 1;
-                ++fmt;
-            }
-
-            char const * scanset_end = get_scanset_end(fmt);
-            if(*scanset_end == '\0') {
-                return cur;
-            }
-
-            while (cur != last && (inversed ^ is_in_scanset(buf[cur], fmt)) &&
-                   (width == 0 || uintv < width)) {
-                cur = ringslice_index_shift_wrap_around(cur, 1, size);
-                ++uintv;
-            }
         }
     } else if (*fmt == '%' && buf[cur] == '%') {
         cur = ringslice_index_shift_wrap_around(cur, 1, size);
@@ -511,7 +487,6 @@ static ringslice_cnt_t wa_parse_arg(ringslice_cnt_t const first,
 /*
  * Public functions.
  */
-
 int ringslice_scanf(ringslice_t const * const rs, const char * fmt, ...) {
     DBC_REQUIRE(444, rs);
     ringslice_cnt_t const first = rs->first;
@@ -527,20 +502,19 @@ int ringslice_scanf(ringslice_t const * const rs, const char * fmt, ...) {
 
     while (fmt[0] != '\0' && cur != last) {
         if (fmt[0] == '%') {
-            bool skip_field = false;
-            if (fmt[1] == '*') {
-                skip_field = true;
-                fmt++; 
-            }
-            ringslice_cnt_t tmp = wa_parse_arg(cur, last, buf, size, &fmt[1], skip_field ? NULL : &args);
+            int assign_output = 1; // Default is to assign output
+            ringslice_cnt_t tmp = wa_parse_arg(cur, last, buf, size, &fmt[1], &args, &assign_output);
             if (tmp == cur) {
                 break;
             }
-            if (!skip_field && fmt[1] != '%') {
+            if (fmt[1] != '%' && assign_output) {
                 ++ret;
             }
             ++fmt;
             while (fmt[0] >= '0' && fmt[0] <= '9') {
+                ++fmt;
+            }
+            if (fmt[0] == '*') {
                 ++fmt;
             }
             if(fmt[0] == '[') {

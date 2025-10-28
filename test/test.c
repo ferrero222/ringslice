@@ -2,7 +2,7 @@
 // ET: embedded test; very simple test example
 //============================================================================
 #include <string.h>
-
+#include <stdio.h>
 #include "et.h"  // ET: embedded test
 #include "ringslice.h"
 
@@ -377,7 +377,7 @@ TEST_GROUP("Basic") {
         char string_buf[20] = {0};
         int intval1 = 0, intval2 = 0;
         int argc = ringslice_scanf(&rs, "+CMGR: %d \"%5[A-Z ]\",%d", &intval1, string_buf, &intval2);
-        VERIFY(argc == 2);
+        VERIFY(argc == 3);
         VERIFY(strcmp("REC U", string_buf) == 0);
         VERIFY(intval1 == 42);
     }
@@ -395,7 +395,7 @@ TEST_GROUP("Basic") {
         VERIFY(val == 42);
         VERIFY(strcmp("[]", string_buf) == 0);
     }
-    TEST("Testing ringslice_sscanf(), discontinuous ring buffer, %* and %[]") {
+    TEST("Testing ringslice_sscanf(), discontinuous ring buffer, scip arg *") {
         char const test_buf[] = "+CMGR: \"REC UNREAD\",\"+79031234567\",56,\"23/10/15,14:30:25+12\"";
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf,
                                                 strlen(test_buf),
@@ -408,4 +408,19 @@ TEST_GROUP("Basic") {
         VERIFY(val == 56);
         VERIFY(strcmp("+79031234567", string_buf) == 0);
     }
+	
+	  TEST("Testing ringslice_sscanf(), continuous ring buffer, new arg after scanset with witdh") {
+        char const test_buf[] = "+CMGR: \"REC UNREAD\",\"+79031234567\",56,\"23/10/15,14:30:25+12\"";
+        ringslice_t rs = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                0,
+                                                strlen(test_buf) - 1);
+        char string_buf[20] = {0};
+        int val = 0;
+        int argc = ringslice_scanf(&rs, "+CMGR: \"%*[^\"]\",\"%4[^\"]\",%d,", string_buf, &val);
+        VERIFY(argc == 2);
+        VERIFY(val == 56);
+        VERIFY(strcmp("+790", string_buf) == 0);
+    }
+	
 }  // TEST_GROUP()
