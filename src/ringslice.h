@@ -39,7 +39,8 @@ extern "C" {
 #include <stdbool.h>
 #include "dbc_assert.h"
 #include "ringslice_config.h"
-
+#include <stddef.h>
+  
 /// ringslice module name for DBC assertions
 #define RINGSLICE_MODULE                                                "ringslice"
 
@@ -113,7 +114,7 @@ void process_data(void) {
     
 
     // Search for an end of line sequence "\r\n"
-    ringslice_t found = ringslice_subslice_with_suffix(&rs, processed_bytes, "\r\n");
+    ringslice_t found = ringslice_subslice_with_suffix(&rs, processed_bytes, "\r\n", strlen("\r\n"));
     if (!ringslice_is_empty(&found)) {
         int arg1, arg2;
         int argc = ringslice_scanf(&found, "+CREG: %d, %d", &arg1, &arg2); // Example of parsing data
@@ -312,28 +313,26 @@ RINGSLICE_INLINE bool ringslice_subslice_equals(ringslice_t const *const slice1,
 * Compares ringslice instance with string lexicographically
 * @param[in] me ringslice instance which is compared with string
 * @param[in] str string for compare
-* @param[in] str_len string length
 *
 * @return 0 if are equal,
 *   negative value if ringslice appears before str in lexicographical order,
 *   positive value if ringslice appears after str in lexicographical order
 *
 */
-int ringslice_strcmp(ringslice_t const * const me, char const * str, const ringslice_cnt_t str_len);
+int ringslice_strcmp(ringslice_t const * const me, char const * str);
 
 /*!
 * Compares ringslice instance with string lexicographically and lenght check
 * @param[in] me ringslice instance which is compared with string
 * @param[in] str string for compare
-* @param[in] str_len string length
-* @param[in] n length to compare
+* @param[in] n lenght
 *
 * @return 0 if are equal,
 *   negative value if ringslice appears before str in lexicographical order,
 *   positive value if ringslice appears after str in lexicographical order
 *
 */
-int ringslice_strncmp(ringslice_t const *const me, char const *str, const ringslice_cnt_t str_len, int n);
+int ringslice_strncmp(ringslice_t const *const me, char const *str, int n);
 
 /*!
 * Searches for substring in ringslice instance
@@ -348,6 +347,19 @@ int ringslice_strncmp(ringslice_t const *const me, char const *str, const ringsl
 ringslice_t ringslice_strstr(ringslice_t const * const me, char const * substr);
 
 /*!
+* Searches for substring in ringslice instance with lenght
+* @param[in] me ringslice instance where substring is searched for
+* @param[in] substr searched substring
+* @param[in] substr_len lenght of byte to compare in substring
+*
+* @return subslice of me slice containing substring, otherwise empty ringslice
+*
+* @note if substr is empty string, then copy of me slice will be returned
+*
+*/
+ringslice_t ringslice_strnstr(ringslice_t const * const me, char const * substr, const ringslice_cnt_t substr_len);
+
+/*!
 * Searches for subslice with suffix in ringslice instance
 * @param[in] me ringslice instance where suffix is searched for
 * @param[in] from_idx start index for searching; if 0, then search from beginning of the slice
@@ -359,6 +371,20 @@ ringslice_t ringslice_strstr(ringslice_t const * const me, char const * substr);
 *
 */
 ringslice_t ringslice_subslice_with_suffix(ringslice_t const * const me, ringslice_cnt_t from_idx, char const * suffix);
+
+/*!
+* Searches for subslice with suffix in ringslice instance
+* @param[in] me ringslice instance where suffix is searched for
+* @param[in] from_idx start index for searching; if 0, then search from beginning of the slice
+* @param[in] suffix suffix that is searched for
+* @param[in] suffix_len lenght of suffix to search
+*
+* @return subslice of me slice with suffix, otherwise empty ringslice
+*
+* @note if suffix is empty string, then copy of me slice will be returned
+*
+*/
+ringslice_t ringslice_subslice_with_nsuffix(ringslice_t const * const me, ringslice_cnt_t from_idx, char const * suffix, const ringslice_cnt_t suffix_len);
 
 /*!
 * scanf implementation for ringslice
@@ -380,6 +406,28 @@ int ringslice_scanf(ringslice_t const * const rs, const char *fmt, ...);
 * @return gap slice instance
 */
 ringslice_t ringslice_subslice_gap(ringslice_t const *const slice1, ringslice_t const *const slice2);
+
+/**
+* @brief Checks if slice1 is located later in buffer than slice2
+* @param[in] slice1 first ringslice instance
+* @param[in] slice2 second ringslice instance
+* @return true if slice1 ends after slice2, false otherwise
+*
+* @note Both slices must be from the same parent buffer
+*/
+bool ringslice_is_later_than(ringslice_t const *const slice1, ringslice_t const *const slice2);
+
+/*!
+* Checks whether a string is a prefix of ringslice
+* @param[in] me ringslice instance which is checked for prefix with string
+* @param[in] str string for check
+*
+* @return 0 if string is a prefix of ringslice,
+*   negative value if ringslice appears before str in lexicographical order,
+*   positive value if ringslice appears after str in lexicographical order
+*
+*/
+int ringslice_prefixcmp(ringslice_t const * const me, char const * str);
 
 /*!
 * @}

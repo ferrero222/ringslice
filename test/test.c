@@ -44,12 +44,12 @@ TEST_GROUP("Basic") {
 
         ringslice_t rs = ringslice_initializer((uint8_t *)buf, buffer_size, first, last);
 
-        VERIFY(ringslice_strcmp(&rs, "Hello World!", strlen("Hello World!")) == 0);
-        VERIFY(ringslice_strcmp(&rs, "Hello!", strlen("Hello!")) < 0);
-        VERIFY(ringslice_strcmp(&rs, "Hello there", strlen("Hello there")) < 0);
-        VERIFY(ringslice_strcmp(&rs, "Hello", strlen("Hello")) > 0);
-        VERIFY(ringslice_strcmp(&rs, "Hello Nick", strlen("Hello Nick")) > 0);
-        VERIFY(ringslice_strcmp(&rs, "Hello World! ", strlen("Hello World! ")) < 0);
+        VERIFY(ringslice_strcmp(&rs, "Hello World!") == 0);
+        VERIFY(ringslice_strcmp(&rs, "Hello!") < 0);
+        VERIFY(ringslice_strcmp(&rs, "Hello there") < 0);
+        VERIFY(ringslice_strcmp(&rs, "Hello") > 0);
+        VERIFY(ringslice_strcmp(&rs, "Hello Nick") > 0);
+        VERIFY(ringslice_strcmp(&rs, "Hello World! ") < 0);
     }
 
     TEST("Testing ringslice_strcmp(), buffer and positioning variation") {
@@ -67,12 +67,12 @@ TEST_GROUP("Basic") {
 
                 ringslice_t rs = ringslice_initializer((uint8_t *)buf, buffer_size, first, last);
 
-                VERIFY(ringslice_strcmp(&rs, slice_str, strlen(slice_str)) == 0);
-                VERIFY(ringslice_strcmp(&rs, "Hello!", strlen("Hello!")) < 0);
-                VERIFY(ringslice_strcmp(&rs, "Hello there", strlen("Hello there")) < 0);
-                VERIFY(ringslice_strcmp(&rs, "Hello", strlen("Hello")) > 0);
-                VERIFY(ringslice_strcmp(&rs, "Hello Nick", strlen("Hello Nick")) > 0);
-                VERIFY(ringslice_strcmp(&rs, "Hello World! ", strlen("Hello World! ")) < 0);
+                VERIFY(ringslice_strcmp(&rs, slice_str) == 0);
+                VERIFY(ringslice_strcmp(&rs, "Hello!") < 0);
+                VERIFY(ringslice_strcmp(&rs, "Hello there") < 0);
+                VERIFY(ringslice_strcmp(&rs, "Hello") > 0);
+                VERIFY(ringslice_strcmp(&rs, "Hello Nick") > 0);
+                VERIFY(ringslice_strcmp(&rs, "Hello World! ") < 0);
             }
         }
     }
@@ -82,13 +82,13 @@ TEST_GROUP("Basic") {
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf, strlen(test_buf), 0, 9);  // note that 'j' character not in ring buffer
 
         ringslice_t subrs = ringslice_subslice(&rs, 0, ringslice_len(&rs));
-        VERIFY(ringslice_strcmp(&subrs, "abcdefghi", strlen("abcdefghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "abcdefghi") == 0);
 
         subrs = ringslice_subslice(&rs, 1, ringslice_len(&rs));
-        VERIFY(ringslice_strcmp(&subrs, "bcdefghi", strlen("bcdefghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "bcdefghi") == 0);
 
         subrs = ringslice_subslice(&rs, 1, ringslice_len(&rs) - 2);
-        VERIFY(ringslice_strcmp(&subrs, "bcdefg", strlen("bcdefg")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "bcdefg") == 0);
 
         for (ringslice_cnt_t i = 0; i < ringslice_len(&rs); i++) {
             subrs = ringslice_subslice(&rs, i, i);
@@ -101,13 +101,13 @@ TEST_GROUP("Basic") {
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf, strlen(test_buf), 6, 5);  // note that 'j' character not in ring buffer
 
         ringslice_t subrs = ringslice_subslice(&rs, 0, ringslice_len(&rs));
-        VERIFY(ringslice_strcmp(&subrs, "abcdefghi", strlen("abcdefghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "abcdefghi") == 0);
 
         subrs = ringslice_subslice(&rs, 1, ringslice_len(&rs));
-        VERIFY(ringslice_strcmp(&subrs, "bcdefghi", strlen("bcdefghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "bcdefghi") == 0);
 
         subrs = ringslice_subslice(&rs, 1, ringslice_len(&rs) - 2);
-        VERIFY(ringslice_strcmp(&subrs, "bcdefg", strlen("bcdefg")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "bcdefg") == 0);
 
         for (ringslice_cnt_t i = 0; i < ringslice_len(&rs); i++) {
             subrs = ringslice_subslice(&rs, i, i);
@@ -118,43 +118,42 @@ TEST_GROUP("Basic") {
     TEST("Testing ringslice_strstr(), continuous ring buffer") {
         char const test_buf[] = "abcdefghij";
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf, strlen(test_buf), 0, 9);  // note that 'j' character not in ring buffer
-
         ringslice_t subrs = ringslice_strstr(&rs, "abc");
-        VERIFY(ringslice_strcmp(&subrs, "abc", strlen("abc")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "abc") == 0);
 
         subrs = ringslice_strstr(&rs, "cd");
-        VERIFY(ringslice_strcmp(&subrs, "cd", strlen("cd")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "cd") == 0);
 
         subrs = ringslice_strstr(&rs, "defg");
-        VERIFY(ringslice_strcmp(&subrs, "defg", strlen("defg")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "defg") == 0);
 
         subrs = ringslice_strstr(&rs, "fghi");
-        VERIFY(ringslice_strcmp(&subrs, "fghi", strlen("fghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "fghi") == 0);
 
         subrs = ringslice_strstr(&rs, "cdfgh");
         VERIFY(ringslice_is_empty(&subrs));             // because there is no such substring, the slice must be empty
-        VERIFY(ringslice_strcmp(&subrs, "cdfgh", strlen("cdfgh")) < 0);  // any empty slice is considered as empty string and must be less than any string
+        VERIFY(ringslice_strcmp(&subrs, "cdfgh") < 0);  // any empty slice is considered as empty string and must be less than any string
     }
 
     TEST("Testing ringslice_strstr(), discontinuous ring buffer") {
-        char const test_buf[] = "efghijabcd";
+        char const test_buf[] = "efghijabccd";
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf, strlen(test_buf), 6, 5);  // note that 'j' character not in ring buffer
 
         ringslice_t subrs = ringslice_strstr(&rs, "abc");
-        VERIFY(ringslice_strcmp(&subrs, "abc", strlen("abc")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "abc") == 0);
 
         subrs = ringslice_strstr(&rs, "cd");
-        VERIFY(ringslice_strcmp(&subrs, "cd", strlen("cd")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "cd") == 0);
 
         subrs = ringslice_strstr(&rs, "defg");
-        VERIFY(ringslice_strcmp(&subrs, "defg", strlen("defg")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "defg") == 0);
 
         subrs = ringslice_strstr(&rs, "fghi");
-        VERIFY(ringslice_strcmp(&subrs, "fghi", strlen("fghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "fghi") == 0);
 
         subrs = ringslice_strstr(&rs, "cdfgh");
         VERIFY(ringslice_is_empty(&subrs));             // because there is no such substring, the slice must be empty
-        VERIFY(ringslice_strcmp(&subrs, "cdfgh", strlen("cdfgh")) < 0);  // any empty slice is considered as empty string and must be less than any string
+        VERIFY(ringslice_strcmp(&subrs, "cdfgh") < 0);  // any empty slice is considered as empty string and must be less than any string
     }
 
     TEST("Testing ringslice_strstr(), discontinuous ring buffer, part of substring is adjacent to substring") {
@@ -162,7 +161,7 @@ TEST_GROUP("Basic") {
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf, strlen(test_buf), 6, 5);  // note that 'a' character not in ring buffer
 
         ringslice_t subrs = ringslice_strstr(&rs, "fghi");
-        VERIFY(ringslice_strcmp(&subrs, "fghi", strlen("fghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "fghi") == 0);
     }
 
     TEST("Testing ringslice_subslice_with_suffix(), continuous ring buffer") {
@@ -170,7 +169,7 @@ TEST_GROUP("Basic") {
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf, strlen(test_buf), 0, 9);
 
         ringslice_t subrs = ringslice_subslice_with_suffix(&rs, 0, "hi");
-        VERIFY(ringslice_strcmp(&subrs, "abcdefghi", strlen("abcdefghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "abcdefghi") == 0);
     }
 
     TEST("Testing ringslice_subslice_with_suffix(), discontinuous ring buffer") {
@@ -178,7 +177,7 @@ TEST_GROUP("Basic") {
         ringslice_t rs = ringslice_initializer((uint8_t *)test_buf, strlen(test_buf), 6, 5);
 
         ringslice_t subrs = ringslice_subslice_with_suffix(&rs, 0, "hi");
-        VERIFY(ringslice_strcmp(&subrs, "abcdefghi", strlen("abcdefghi")) == 0);
+        VERIFY(ringslice_strcmp(&subrs, "abcdefghi") == 0);
     }
 
     TEST("Testing ringslice_subslice_equals()") {
@@ -231,7 +230,7 @@ TEST_GROUP("Basic") {
                                                 8,
                                                 0);
         ringslice_t rs_res = ringslice_subslice_gap(&rs1, &rs2);
-        VERIFY(ringslice_strcmp(&rs_res, "1234", strlen("1234")) == 0);
+        VERIFY(ringslice_strcmp(&rs_res, "1234") == 0);
         
         rs1 = ringslice_initializer((uint8_t *)test_buf,
                                                 strlen(test_buf),
@@ -243,7 +242,7 @@ TEST_GROUP("Basic") {
                                                 6);
         rs_res = ringslice_subslice_gap(&rs1, &rs2);
         
-        VERIFY(ringslice_strcmp(&rs_res, "wqqw", strlen("wqqw")) == 0);   
+        VERIFY(ringslice_strcmp(&rs_res, "wqqw") == 0);   
     }
 
     TEST("Testing ringslice_subslice_after()") {
@@ -257,9 +256,9 @@ TEST_GROUP("Basic") {
                                                 0,
                                                 4);
         ringslice_t rs_res = ringslice_subslice_after(&rs1, &rs2, 4);
-        VERIFY(ringslice_strcmp(&rs_res, "1234", strlen("1234")) == 0);
+        VERIFY(ringslice_strcmp(&rs_res, "1234") == 0);
         rs_res = ringslice_subslice_after(&rs1, &rs2, 0);
-        VERIFY(ringslice_strcmp(&rs_res, "1234rew", strlen("1234rew")) == 0);   
+        VERIFY(ringslice_strcmp(&rs_res, "1234rew") == 0);   
     }
 
 
@@ -279,12 +278,12 @@ TEST_GROUP("Basic") {
 
         ringslice_t rs = ringslice_initializer((uint8_t *)buf, buffer_size, first, last);
 
-        VERIFY(ringslice_strncmp(&rs, "Hello World!", strlen("Hello World!"), buffer_size) == 0);
-        VERIFY(ringslice_strncmp(&rs, "Hello!", strlen("Hello!"), buffer_size) < 0);
-        VERIFY(ringslice_strncmp(&rs, "Hello there", strlen("Hello there"), buffer_size) < 0);
-        VERIFY(ringslice_strncmp(&rs, "Hello", strlen("Hello"), buffer_size) > 0);
-        VERIFY(ringslice_strncmp(&rs, "Hello Nick", strlen("Hello Nick"), buffer_size) > 0);
-        VERIFY(ringslice_strncmp(&rs, "Hello World! ", strlen("Hello World! "), buffer_size) < 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello World!", buffer_size) == 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello!", buffer_size) < 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello there", buffer_size) < 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello", buffer_size) > 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello Nick", buffer_size) > 0);
+        VERIFY(ringslice_strncmp(&rs, "Hello World! ", buffer_size) < 0);
     }
 
     TEST("Testing ringslice_strncmp(), buffer and positioning variation") {
@@ -302,17 +301,15 @@ TEST_GROUP("Basic") {
 
                 ringslice_t rs = ringslice_initializer((uint8_t *)buf, buffer_size, first, last);
 
-                VERIFY(ringslice_strncmp(&rs, slice_str, strlen(slice_str), buffer_size) == 0);
-                VERIFY(ringslice_strncmp(&rs, "Hello!", strlen("Hello!"), buffer_size) < 0);
-                VERIFY(ringslice_strncmp(&rs, "Hello there", strlen("Hello there"), buffer_size) < 0);
-                VERIFY(ringslice_strncmp(&rs, "Hello", strlen("Hello"), buffer_size) > 0);
-                VERIFY(ringslice_strncmp(&rs, "Hello Nick", strlen("Hello Nick"), buffer_size) > 0);
-                VERIFY(ringslice_strncmp(&rs, "Hello World! ", strlen("Hello World! "), buffer_size) < 0);
+                VERIFY(ringslice_strncmp(&rs, slice_str, buffer_size) == 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello!", buffer_size) < 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello there", buffer_size) < 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello", buffer_size) > 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello Nick", buffer_size) > 0);
+                VERIFY(ringslice_strncmp(&rs, "Hello World! ", buffer_size) < 0);
             }
         }
     }
-
-
 
 
     TEST("Testing ringslice_sscanf(), discontinuous ring buffer, integers") {
@@ -421,6 +418,23 @@ TEST_GROUP("Basic") {
         VERIFY(argc == 2);
         VERIFY(val == 56);
         VERIFY(strcmp("+790", string_buf) == 0);
+    }
+
+    	
+    TEST("Testing ringslice_is_later_than()") {
+        char const test_buf[] = "qwer1234rewq";
+        ringslice_t rs1 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                0,
+                                                4);
+        ringslice_t rs2 = ringslice_initializer((uint8_t *)test_buf,
+                                                strlen(test_buf),
+                                                8,
+                                                0);
+        bool res = ringslice_is_later_than(&rs2, &rs1);
+        VERIFY(res);
+        res = ringslice_is_later_than(&rs1, &rs2);
+        VERIFY(!res);
     }
 	
 }  // TEST_GROUP()
